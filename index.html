@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warehouse Control Room</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111b2f;
+      --panel-2: #16223a;
+      --text: #e8f0ff;
+      --muted: #9bb1d1;
+      --accent: #5fd1ff;
+      --accent-2: #8ce99a;
+      --danger: #f38ba8;
+      --warning: #f7c266;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(95, 209, 255, 0.08), transparent 30%),
+                  radial-gradient(circle at 80% 30%, rgba(140, 233, 154, 0.06), transparent 35%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(90deg, rgba(95, 209, 255, 0.06), rgba(12, 25, 45, 0.2));
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.25);
+    }
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: var(--text);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    header h1 span {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .pill {
+      background: rgba(95, 209, 255, 0.12);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(95, 209, 255, 0.25);
+      letter-spacing: 0.4px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      padding: 16px 16px 20px 16px;
+      height: calc(100vh - 74px);
+      min-height: 620px;
+    }
+    .sidebar {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .kpi {
+      background: var(--panel-2);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.04);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .kpi .label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.2px;
+    }
+    .kpi .value {
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .kpi .sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .log {
+      background: var(--panel-2);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 320px;
+      overflow: hidden;
+    }
+    .log h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+      color: var(--muted);
+    }
+    .log-entries {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      gap: 8px;
+      padding-right: 4px;
+      scrollbar-width: thin;
+    }
+    .entry {
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.04);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.4px;
+      background: rgba(95, 209, 255, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(95, 209, 255, 0.25);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .badge.warning { background: rgba(247, 194, 102, 0.12); color: var(--warning); border-color: rgba(247, 194, 102, 0.3); }
+    .badge.danger { background: rgba(243, 139, 168, 0.14); color: var(--danger); border-color: rgba(243, 139, 168, 0.32); }
+
+    .entry .meta { color: var(--muted); font-size: 12px; }
+    .entry .msg { font-size: 14px; line-height: 1.4; color: var(--text); }
+
+    .map-panel {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      min-height: 520px;
+    }
+    #mapCanvas {
+      width: 100%; height: 100%; display: block; background: #0b1424;
+    }
+    .overlay {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(11, 18, 32, 0.85);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      backdrop-filter: blur(4px);
+    }
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 12px; height: 12px; border-radius: 4px; }
+
+    @media (max-width: 1120px) {
+      .layout { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; min-height: unset; }
+      body { overflow: auto; }
+      .map-panel { min-height: 540px; order: 1; }
+      .sidebar { order: 2; }
+    }
+
+    @media (max-width: 720px) {
+      header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .layout { padding: 12px; }
+      .kpis { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+      .sidebar { padding: 12px; }
+      .log { min-height: 260px; }
+      .map-panel { min-height: 420px; }
+      .overlay { right: 8px; left: 8px; top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Warehouse Control Room <span class="pill">Live Simulation</span></h1>
+    <div class="pill">Dark mode · Maps-style canvas</div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="kpis" id="kpiGrid">
+        <!-- KPI cards injected by JS -->
+      </div>
+      <div class="log">
+        <h3>Activity Log</h3>
+        <div class="log-entries" id="logEntries"></div>
+      </div>
+    </aside>
+    <section class="map-panel">
+      <canvas id="mapCanvas"></canvas>
+      <div class="overlay">
+        <div>Top-down warehouse layout</div>
+        <div class="legend">
+          <div class="legend-item"><span class="dot" style="background: #5fd1ff"></span>Forklifts</div>
+          <div class="legend-item"><span class="dot" style="background: #8ce99a"></span>Workers</div>
+          <div class="legend-item"><span class="dot" style="background: #f7c266"></span>Trucks</div>
+          <div class="legend-item"><span class="dot" style="background: #6c89ff"></span>Storage aisles</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const kpiGrid = document.getElementById('kpiGrid');
+    const logEntries = document.getElementById('logEntries');
+
+    const world = { width: 1200, height: 800 };
+    let scale = 1;
+    let dpr = window.devicePixelRatio || 1;
+
+    const state = {
+      bins: [],
+      forklifts: [],
+      workers: [],
+      trucks: [],
+      docks: [],
+      scrapYard: { x: 1040, y: 650, w: 120, h: 90 },
+      stats: {
+        receipts: 0,
+        outbound: 0,
+        scrap: 0,
+        activeVehicles: 0,
+        throughput: 0,
+      },
+      eventsPerMinute: [],
+    };
+
+    const kpis = [
+      { key: 'receipts', label: 'Receipts processed', color: 'var(--accent)' },
+      { key: 'outbound', label: 'Outbound shipments', color: '#8ce99a' },
+      { key: 'scrap', label: 'Scrap events', color: 'var(--danger)' },
+      { key: 'activeVehicles', label: 'Active vehicles', color: 'var(--warning)' },
+      { key: 'throughput', label: 'Throughput / min', color: 'var(--text)' },
+    ];
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      dpr = window.devicePixelRatio || 1;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      scale = Math.min(rect.width / world.width, rect.height / world.height);
+    }
+
+    function project(x, y) {
+      return {
+        x: x * scale + (canvas.width - world.width * scale) / 2,
+        y: y * scale + (canvas.height - world.height * scale) / 2,
+      };
+    }
+
+    function initBins() {
+      const aisles = 10;
+      const binsPerAisle = 30;
+      for (let a = 0; a < aisles; a++) {
+        const aisleX = 160 + a * 90;
+        for (let b = 0; b < binsPerAisle; b++) {
+          state.bins.push({
+            id: `SKU-${a * binsPerAisle + b + 1}`,
+            x: aisleX,
+            y: 60 + b * 22,
+            aisle: a + 1,
+            level: (b % 6) + 1,
+          });
+        }
+      }
+    }
+
+    function initDocks() {
+      for (let i = 0; i < 5; i++) {
+        state.docks.push({ x: 40 + i * 180, y: 720, w: 120, h: 50 });
+      }
+    }
+
+    function initActors() {
+      for (let i = 0; i < 8; i++) {
+        state.forklifts.push({
+          x: 200 + i * 40,
+          y: 700,
+          color: '#5fd1ff',
+          speed: 1.2 + Math.random() * 0.6,
+          path: [],
+          carrying: null,
+          status: 'idle',
+        });
+      }
+      for (let i = 0; i < 15; i++) {
+        state.workers.push({
+          x: 300 + Math.random() * 500,
+          y: 300 + Math.random() * 200,
+          color: '#8ce99a',
+          speed: 0.5 + Math.random() * 0.4,
+          target: randomBin(),
+        });
+      }
+    }
+
+    function randomBin() {
+      return state.bins[Math.floor(Math.random() * state.bins.length)];
+    }
+
+    function spawnTruck(type) {
+      const dock = state.docks[Math.floor(Math.random() * state.docks.length)];
+      const truck = {
+        x: dock.x + dock.w / 2,
+        y: dock.y + dock.h / 2,
+        w: 130,
+        h: 42,
+        type,
+        color: type === 'inbound' ? '#f7c266' : '#6c89ff',
+        ttl: 12 + Math.random() * 10,
+      };
+      state.trucks.push(truck);
+    }
+
+    function addLog(type, message) {
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      const badge = document.createElement('div');
+      badge.className = `badge ${type === 'scrap' ? 'danger' : type === 'warning' ? 'warning' : ''}`;
+      badge.textContent = type.toUpperCase();
+      const content = document.createElement('div');
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = new Date().toLocaleTimeString();
+      const msg = document.createElement('div');
+      msg.className = 'msg';
+      msg.textContent = message;
+      content.appendChild(meta);
+      content.appendChild(msg);
+      entry.appendChild(badge);
+      entry.appendChild(content);
+      logEntries.prepend(entry);
+      while (logEntries.children.length > 40) {
+        logEntries.removeChild(logEntries.lastChild);
+      }
+    }
+
+    function buildKpis() {
+      kpis.forEach((kpi) => {
+        const card = document.createElement('div');
+        card.className = 'kpi';
+        card.innerHTML = `
+          <div class="label">${kpi.label}</div>
+          <div class="value" data-key="${kpi.key}">
+            <span class="num">0</span>
+            <span class="sub">live</span>
+          </div>`;
+        card.querySelector('.num').style.color = kpi.color;
+        kpiGrid.appendChild(card);
+      });
+    }
+
+    function updateKpis() {
+      kpis.forEach((kpi) => {
+        const valueEl = kpiGrid.querySelector(`[data-key="${kpi.key}"] .num`);
+        if (!valueEl) return;
+        valueEl.textContent = state.stats[kpi.key].toLocaleString();
+      });
+    }
+
+    function pushThroughputEvent() {
+      const now = Date.now();
+      state.eventsPerMinute.push(now);
+      const cutoff = now - 60000;
+      state.eventsPerMinute = state.eventsPerMinute.filter((t) => t > cutoff);
+      state.stats.throughput = state.eventsPerMinute.length;
+    }
+
+    function assignTask(type) {
+      const forklift = state.forklifts[Math.floor(Math.random() * state.forklifts.length)];
+      const dock = state.docks[Math.floor(Math.random() * state.docks.length)];
+      const bin = randomBin();
+      const scrap = state.scrapYard;
+      let path = [];
+      if (type === 'receiving') {
+        path = [
+          { x: dock.x + dock.w / 2, y: dock.y },
+          { x: bin.x, y: bin.y },
+          { x: dock.x + dock.w / 2, y: dock.y },
+        ];
+      } else if (type === 'shipping') {
+        path = [
+          { x: bin.x, y: bin.y },
+          { x: dock.x + dock.w / 2, y: dock.y },
+          { x: bin.x + 20, y: bin.y + 20 },
+        ];
+      } else if (type === 'scrap') {
+        path = [
+          { x: bin.x, y: bin.y },
+          { x: scrap.x + scrap.w / 2, y: scrap.y + scrap.h / 2 },
+          { x: bin.x, y: bin.y },
+        ];
+      }
+      forklift.path = path;
+      forklift.status = type;
+      forklift.carrying = type === 'scrap' ? 'scrap' : 'pallet';
+      addLog(type === 'scrap' ? 'scrap' : 'info', `${type} task for ${bin.id} assigned to vehicle`);
+    }
+
+    function simulateEvents() {
+      const roll = Math.random();
+      if (roll < 0.4) {
+        assignTask('receiving');
+        state.stats.receipts += 1;
+        pushThroughputEvent();
+        spawnTruck('inbound');
+      } else if (roll < 0.8) {
+        assignTask('shipping');
+        state.stats.outbound += 1;
+        pushThroughputEvent();
+        spawnTruck('outbound');
+      } else {
+        assignTask('scrap');
+        state.stats.scrap += 1;
+        pushThroughputEvent();
+      }
+      updateKpis();
+    }
+
+    function updateActors() {
+      state.forklifts.forEach((f) => {
+        if (f.path.length > 0) {
+          const target = f.path[0];
+          const dx = target.x - f.x;
+          const dy = target.y - f.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 4) {
+            f.path.shift();
+            if (f.path.length === 0) {
+              f.status = 'idle';
+              f.carrying = null;
+            }
+          } else {
+            f.x += (dx / dist) * f.speed * 2.6;
+            f.y += (dy / dist) * f.speed * 2.6;
+          }
+        }
+      });
+      state.workers.forEach((w) => {
+        if (!w.target) w.target = randomBin();
+        const dx = w.target.x - w.x;
+        const dy = w.target.y - w.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 6) {
+          w.target = randomBin();
+        } else {
+          w.x += (dx / dist) * w.speed * 1.6;
+          w.y += (dy / dist) * w.speed * 1.6;
+        }
+      });
+      state.trucks.forEach((t) => (t.ttl -= 0.02));
+      state.trucks = state.trucks.filter((t) => t.ttl > 0);
+      const moving = state.forklifts.filter((f) => f.path.length > 0).length;
+      state.stats.activeVehicles = moving;
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#0b1424');
+      gradient.addColorStop(1, '#0c192d');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= world.width; x += 20) {
+        const isMajor = x % 100 === 0;
+        const p1 = project(x, 0);
+        const p2 = project(x, world.height);
+        ctx.strokeStyle = isMajor ? 'rgba(95, 209, 255, 0.12)' : 'rgba(255,255,255,0.03)';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= world.height; y += 20) {
+        const isMajor = y % 100 === 0;
+        const p1 = project(0, y);
+        const p2 = project(world.width, y);
+        ctx.strokeStyle = isMajor ? 'rgba(95, 209, 255, 0.12)' : 'rgba(255,255,255,0.03)';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.setLineDash([6 * scale, 8 * scale]);
+      const walkwayY = [140, 320, 500, 680];
+      walkwayY.forEach((y) => {
+        const p1 = project(0, y);
+        const p2 = project(world.width, y);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
+
+    function drawAisles() {
+      const aisleWidth = 48;
+      const laneSpacing = 90;
+      ctx.fillStyle = 'rgba(108, 137, 255, 0.18)';
+      ctx.strokeStyle = 'rgba(108, 137, 255, 0.4)';
+      ctx.lineWidth = 1.5;
+      for (let a = 0; a < 10; a++) {
+        const aisleX = 160 + a * laneSpacing;
+        const start = project(aisleX - aisleWidth / 2, 40);
+        const height = world.height - 120;
+        ctx.beginPath();
+        ctx.roundRect(start.x, start.y, aisleWidth * scale, height * scale, 6 * scale);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.font = `${11 * scale}px 'Inter', sans-serif`;
+        ctx.fillText(`Aisle ${a + 1}`, start.x + 6 * scale, start.y + 14 * scale);
+        ctx.fillStyle = 'rgba(108, 137, 255, 0.18)';
+      }
+    }
+
+    function drawDocks() {
+      ctx.fillStyle = 'rgba(247, 194, 102, 0.15)';
+      ctx.strokeStyle = 'rgba(247, 194, 102, 0.7)';
+      state.docks.forEach((dock, idx) => {
+        const p = project(dock.x, dock.y);
+        ctx.fillRect(p.x, p.y, dock.w * scale, dock.h * scale);
+        ctx.strokeRect(p.x, p.y, dock.w * scale, dock.h * scale);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.setLineDash([4 * scale, 4 * scale]);
+        ctx.beginPath();
+        ctx.moveTo(p.x + dock.w * scale / 2, p.y);
+        ctx.lineTo(p.x + dock.w * scale / 2, p.y + dock.h * scale);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(247, 194, 102, 0.75)';
+        ctx.font = `${11 * scale}px 'Inter', sans-serif`;
+        ctx.fillText(`Dock ${idx + 1}`, p.x + 6 * scale, p.y + 14 * scale);
+      });
+    }
+
+    function drawScrapYard() {
+      const { x, y, w, h } = state.scrapYard;
+      const p = project(x, y);
+      ctx.fillStyle = 'rgba(243, 139, 168, 0.12)';
+      ctx.strokeStyle = 'rgba(243, 139, 168, 0.5)';
+      ctx.fillRect(p.x, p.y, w * scale, h * scale);
+      ctx.strokeRect(p.x, p.y, w * scale, h * scale);
+      ctx.fillStyle = 'rgba(243, 139, 168, 0.6)';
+      ctx.font = `${12 * scale}px sans-serif`;
+      ctx.fillText('Scrap Bay', p.x + 8, p.y + 16);
+    }
+
+    function drawBins() {
+      state.bins.forEach((bin) => {
+        const p = project(bin.x, bin.y);
+        const radius = 4 * scale;
+        const hue = 200 + bin.level * 6;
+        ctx.fillStyle = `hsla(${hue}, 70%, 70%, 0.9)`;
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.roundRect(p.x - radius, p.y - radius, radius * 2.2, radius * 2.2, 2 * scale);
+        ctx.fill();
+        ctx.stroke();
+      });
+    }
+
+    function drawWorkers() {
+      state.workers.forEach((w) => {
+        const p = project(w.x, w.y);
+        ctx.fillStyle = w.color;
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(p.x - 5 * scale, p.y - 5 * scale, 10 * scale, 10 * scale, 3 * scale);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawForklifts() {
+      state.forklifts.forEach((f) => {
+        const p = project(f.x, f.y);
+        ctx.fillStyle = f.color;
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(p.x - 11 * scale, p.y - 7 * scale, 22 * scale, 14 * scale, 4 * scale);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.24)';
+        ctx.fillRect(p.x - 8 * scale, p.y - 5 * scale, 6 * scale, 10 * scale);
+        ctx.fillRect(p.x + 2 * scale, p.y - 5 * scale, 6 * scale, 10 * scale);
+
+        if (f.carrying) {
+          ctx.fillStyle = 'rgba(255,255,255,0.2)';
+          ctx.fillRect(p.x - 6 * scale, p.y - 16 * scale, 12 * scale, 6 * scale);
+          ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+          ctx.strokeRect(p.x - 6 * scale, p.y - 16 * scale, 12 * scale, 6 * scale);
+        }
+      });
+    }
+
+    function drawTrucks() {
+      state.trucks.forEach((t) => {
+        const p = project(t.x - t.w / 2, t.y - t.h / 2);
+        ctx.fillStyle = t.color;
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        ctx.roundRect(p.x, p.y, t.w * scale, t.h * scale, 6 * scale);
+        ctx.fill();
+        ctx.stroke();
+      });
+    }
+
+    function drawLabels() {
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = `${13 * scale}px 'Inter', sans-serif`;
+      const dockLabel = project(40, 710);
+      ctx.fillText('Inbound/Outbound Docks', dockLabel.x, dockLabel.y - 10);
+      const scrapLabel = project(state.scrapYard.x, state.scrapYard.y + state.scrapYard.h + 14);
+      ctx.fillText('Scrap + QA Hold', scrapLabel.x, scrapLabel.y);
+    }
+
+    function loop() {
+      updateActors();
+      drawBackground();
+      drawAisles();
+      drawDocks();
+      drawScrapYard();
+      drawBins();
+      drawTrucks();
+      drawForklifts();
+      drawWorkers();
+      drawLabels();
+      requestAnimationFrame(loop);
+    }
+
+    function boot() {
+      resizeCanvas();
+      initBins();
+      initDocks();
+      initActors();
+      buildKpis();
+      updateKpis();
+      addLog('info', 'Simulation ready: receiving, shipping, scrapping flows active');
+
+      window.addEventListener('resize', resizeCanvas);
+      const observer = new ResizeObserver(resizeCanvas);
+      observer.observe(canvas.parentElement);
+
+      loop();
+      setInterval(simulateEvents, 1800);
+    }
+
+    boot();
+  </script>
+</body>
+</html>
